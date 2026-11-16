@@ -238,6 +238,24 @@ jobs:
           git apply --check /tmp/wf.patch
           git apply /tmp/wf.patch
 
+      - name: Corrigir inicializadores dos textos de geracoes
+        run: |
+          python3 - <<'PYFIX'
+          from pathlib import Path
+          p = Path('src/starter_choose.c')
+          s = p.read_text()
+          anchor = 'static const u8 *const sText_WfGeneration[WF_STARTER_GENERATIONS] ='
+          assert s.count(anchor) == 1, 'Tabela de geracoes nao encontrada ou duplicada'
+          regions = ['KANTO', 'JOHTO', 'HOENN', 'SINNOH', 'UNOVA', 'KALOS', 'ALOLA', 'GALAR', 'PALDEA']
+          definitions = '\n'.join(f'static const u8 sText_WfGen{i}[] = _("GERACAO {i}/9 - {name}");' for i, name in enumerate(regions, 1))
+          for i, name in enumerate(regions, 1):
+              old = f'    _("GERACAO {i}/9 - {name}"),'
+              assert s.count(old) == 1, f'Texto da geracao {i} nao encontrado'
+              s = s.replace(old, f'    sText_WfGen{i},')
+          p.write_text(s.replace(anchor, definitions + '\n' + anchor))
+          print('Corrigidos os nove textos de geracao do seletor de iniciais')
+          PYFIX
+
       - name: Testar sistemas e configuracoes
         run: |
           python3 test/overworld/ValidateWindFrontierStarters.py
@@ -247,7 +265,25 @@ jobs:
           python3 test/overworld/ValidateConfigRules.py
 
       - name: Compilar ROM modificada
-        run: make modern -j2
+        shell: bash
+        run: |
+          if ! make modern -j2 > build.log 2>&1; then
+            echo '=== ERROS DA COMPILACAO (resumo) ==='
+            grep -E 'error:|fatal error:|make: \*\*\*|undefined reference|Error [0-9]+' build.log | head -n 60 || true
+            echo '=== ULTIMAS 50 LINHAS ==='
+            tail -n 50 build.log
+            exit 1
+          fi
+          echo 'Compilacao concluida. Ultimas linhas:'
+          tail -n 12 build.log
+
+      - name: Guardar log caso a compilacao falhe
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wind-frontier-build-errors
+          path: build.log
+          if-no-files-found: ignore
 
       - name: Preparar ROM de teste
         run: |
