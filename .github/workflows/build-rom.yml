@@ -1,0 +1,37 @@
+
+name: Compilar Pokemon World
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar compiladores
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            binutils-arm-none-eabi \
+            gcc-arm-none-eabi \
+            libnewlib-arm-none-eabi \
+            libpng-dev \
+            python3 git
+
+      - name: Compilar ROM
+        run: |
+          make modern -j2
+
+      - name: Guardar resultado
+        uses: actions/upload-artifact@v4
+        with:
+          name: pokemon-world-build
+          path: pokemonworld.gba
+          if-no-files-found: error
