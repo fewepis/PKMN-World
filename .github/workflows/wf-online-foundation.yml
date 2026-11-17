@@ -55,7 +55,7 @@ jobs:
       - name: Install GBA build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi libpng-dev python3 git
+          sudo apt-get install -y --no-install-recommends -o Acquire::Retries=2 -o Acquire::http::Timeout=30 build-essential gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi libpng-dev python3 git
       - name: Restore proven 0.3.2 then build telemetry ROM
         shell: bash
         run: |
